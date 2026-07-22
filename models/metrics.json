@@ -1,0 +1,16 @@
+{
+  "model": "LogReg",
+  "trained": "2026-07-22",
+  "n_train": 14314,
+  "n_val": 1548,
+  "n_test": 1076,
+  "test_period": "2025-07-01 .. 2026-07-18",
+  "test_accuracy": 0.6375,
+  "test_auc": 0.6631,
+  "test_brier": 0.2359,
+  "test_logloss": 0.674,
+  "val_auc": 0.6855,
+  "n_features": 68,
+  "baseline_elo_accuracy": 0.552,
+  "baseline_experience_accuracy": 0.4424
+}
