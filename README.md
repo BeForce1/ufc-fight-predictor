@@ -81,7 +81,7 @@ validation period:
 ## Try it
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/BeForce1/ufc-fight-predictor.git
 cd ufc-fight-predictor
 pip install -r requirements.txt
 
@@ -108,8 +108,11 @@ python predict.py "Islam Makhachev" "Charles Oliveira"
 ==========================================================
 ```
 
-Names are fuzzy-matched, so `python predict.py makhachev oliveira` also works,
-and the prediction is independent of argument order.
+Matching is case- and accent-insensitive, so
+`python predict.py "islam makhachev" "charles oliveira"` works too; a unique last
+name resolves on its own, while an ambiguous surname like `oliveira` (shared by
+many fighters) lists the candidates so you can be specific. The prediction is
+independent of argument order.
 
 ---
 
@@ -335,7 +338,7 @@ survived; the rest are recorded so they aren't re-attempted.
 | `features.py` | shared feature code (identical at train and serve time) |
 | `elo.py` | ELO/Glicko rating system |
 | `test_predictor.py` | 7-check regression suite |
-| `data/` | public UFCStats snapshot (4 CSVs) |
+| `data/` | 3 UFCStats tables (fighters / fights / rounds) + a generated strength-of-schedule table |
 | `models/` | trained model, feature list, tuned K, metrics |
 | `reports/` | the three charts above |
 
