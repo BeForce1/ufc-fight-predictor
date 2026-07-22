@@ -400,6 +400,9 @@ def compute_fighter_stats(
         "layoff_days":           layoff_days,
         "last_fight_date":  last_fight_date,
         **last5_stats,
+        # Absolute career damage taken ("mileage"): total significant strikes
+        # opponents landed on this fighter across all prior UFC bouts.
+        "career_abs_absorbed":     float(against_sig_str_landed),
         "career_n_fights":         float(n_fights),
         "career_n_wins":           float(wins),
         "career_n_losses":         float(losses),
@@ -439,10 +442,14 @@ def _populate_sos_features(feats: dict, name_a: str, name_b: str, as_of=None) ->
     """Add strength-of-schedule (opponent-quality) columns from opponent_quality.csv."""
     if "oq" not in _OQ_CACHE:
         oq_path = DATA_DIR / "opponent_quality.csv"
-        _OQ_CACHE["oq"] = pd.read_csv(oq_path, parse_dates=["event_date"]) if oq_path.exists() else None
+        if not oq_path.exists():
+            # Fail loudly: silently zeroing 21 SOS features would quietly
+            # degrade every prediction. Regenerate with gen_opponent_quality.py.
+            raise FileNotFoundError(
+                f"{oq_path} is missing - run `python gen_opponent_quality.py` first."
+            )
+        _OQ_CACHE["oq"] = pd.read_csv(oq_path, parse_dates=["event_date"])
     oq = _OQ_CACHE["oq"]
-    if oq is None:
-        return
 
     sos_cols = [c for c in oq.columns if c not in ("fighter", "event_date")]
 
@@ -529,6 +536,7 @@ def build_features(focal: dict, opp: dict) -> dict:
         "ufc_sig_str_absorbed_pm_last5": "sig_str_absorbed_pm_last5",
         "ufc_sig_str_defense_last5":     "sig_str_defense_last5",
         "ufc_td_defense_last5":          "td_defense_last5",
+        "career_abs_absorbed":     "career_abs_absorbed",
         "career_n_fights":         "career_n_fights",
         "career_n_wins":           "career_n_wins",
         "career_n_losses":         "career_n_losses",

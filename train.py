@@ -184,6 +184,23 @@ def main(rebuild: bool):
     # ── 3. Held-out test metrics ──────────────────────────────────────────────
     p_te = cal.predict_proba(Xte)[:, 1]
     pred = (p_te >= 0.5).astype(int)
+
+    # Deployed semantics: each fight appears twice (both perspectives); the CLI
+    # averages them into one order-invariant probability. Score that too.
+    te_df = df.loc[te, ["focal_fighter", "opp_fighter", "event_date", "focal_win"]].copy()
+    te_df["p"] = p_te
+    te_df["pair"] = [tuple(sorted((a, b))) + (d,) for a, b, d in
+                     zip(te_df.focal_fighter, te_df.opp_fighter, te_df.event_date)]
+    pf_probs, pf_labels = [], []
+    for _, grp in te_df.groupby("pair"):
+        if len(grp) != 2:
+            continue
+        r0, r1 = grp.iloc[0], grp.iloc[1]
+        pf_probs.append((r0.p + (1.0 - r1.p)) / 2.0)
+        pf_labels.append(int(r0.focal_win))
+    pf_probs, pf_labels = np.array(pf_probs), np.array(pf_labels)
+    pf_acc = float(accuracy_score(pf_labels, (pf_probs >= 0.5).astype(int)))
+    pf_auc = float(roc_auc_score(pf_labels, pf_probs))
     elo_k = json.loads((MODELS_DIR / "elo_k.json").read_text())["K"]
     metrics = {
         "model": best_name,
@@ -193,6 +210,9 @@ def main(rebuild: bool):
         "test_period": f"{TEST_START.date()} .. {dt.max().date()}",
         "test_accuracy": round(float(accuracy_score(y[te], pred)), 4),
         "test_auc": round(float(roc_auc_score(y[te], p_te)), 4),
+        "test_perfight_accuracy": round(pf_acc, 4),
+        "test_perfight_auc": round(pf_auc, 4),
+        "n_test_fights": int(len(pf_labels)),
         "test_brier": round(float(brier_score_loss(y[te], p_te)), 4),
         "test_logloss": round(float(log_loss(y[te], p_te)), 4),
         "val_auc": round(float(best_auc), 4),

@@ -5,6 +5,7 @@
   "stance_mismatch",
   "weight_class_enc",
   "diff_bad_loss_ratio",
+  "diff_career_abs_absorbed",
   "diff_career_n_fights",
   "diff_career_n_finishes",
   "diff_career_n_losses",
