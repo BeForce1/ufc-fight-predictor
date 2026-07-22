@@ -234,12 +234,65 @@ def main(rebuild: bool):
     (MODELS_DIR / "feature_cols.json").write_text(json.dumps(feat_cols, indent=2))
     (MODELS_DIR / "metrics.json").write_text(json.dumps(metrics, indent=2))
 
-    _plot_calibration(y[te].values, p_te, REPORTS_DIR / "calibration.png")
-    _plot_accuracy_by_confidence(y[te].values, p_te, REPORTS_DIR / "accuracy_by_confidence.png")
+    # Charts use the deployed per-fight probabilities (each fight scored once,
+    # both perspectives averaged) so they match the headline per-fight metrics.
+    _plot_calibration(pf_labels, pf_probs, REPORTS_DIR / "calibration.png")
+    _plot_accuracy_by_confidence(pf_labels, pf_probs, REPORTS_DIR / "accuracy_by_confidence.png")
+    _plot_coefficients(best_model, feat_cols, REPORTS_DIR / "coefficients.png")
     print(f"\n  saved model + metrics to {MODELS_DIR}, charts to {REPORTS_DIR}")
 
 
 # ── Charts ─────────────────────────────────────────────────────────────────────
+
+COEF_LABELS = {
+    "age_diff": "Age difference",
+    "diff_career_n_fights": "Career fight count",
+    "diff_career_total_fight_min": "Career fight-minutes",
+    "diff_career_n_losses": "Career losses",
+    "diff_career_abs_absorbed": "Career damage absorbed",
+    "elo_diff": "ELO rating",
+    "diff_career_n_wins": "Career wins",
+    "diff_career_years_in_ufc": "Years in UFC",
+    "diff_career_n_title_bouts": "Title bouts fought",
+    "diff_career_n_title_wins": "Title bouts won",
+    "diff_ufc_win_rate_last5": "Win rate, last 5",
+    "diff_ufc_dec_rate": "Decision rate",
+    "diff_ufc_sig_str_defense_last5": "Strike defense, last 5",
+    "diff_ufc_sig_str_defense": "Strike defense, career",
+    "diff_ufc_win_streak": "Current win streak",
+}
+
+
+def _plot_coefficients(model, feat_cols, path):
+    """Top-15 standardized coefficients of the winning model. No-op if the
+    selected model isn't the LR pipeline (tree models expose no linear coefs)."""
+    lr = getattr(model, "named_steps", {}).get("logisticregression")
+    if lr is None:
+        return
+    coef = lr.coef_.ravel()
+    order = np.argsort(-np.abs(coef))[:15]
+    names = [COEF_LABELS.get(feat_cols[i], feat_cols[i]) for i in order][::-1]
+    vals  = [float(coef[i]) for i in order][::-1]
+    pos, neg = "#2c3e50", "#a7b0b8"
+    colors = [pos if v > 0 else neg for v in vals]
+    fig, ax = plt.subplots(figsize=(7.4, 5.6))
+    yy = np.arange(len(vals))
+    ax.barh(yy, vals, color=colors, height=0.72)
+    ax.axvline(0, color="#666", lw=1)
+    ax.set_yticks(yy); ax.set_yticklabels(names, fontsize=10)
+    for yi, v in zip(yy, vals):
+        ax.text(v + (0.006 if v > 0 else -0.006), yi, f"{v:+.3f}",
+                va="center", ha="left" if v > 0 else "right", fontsize=8.5, color="#222")
+    lim = max(0.42, max(abs(v) for v in vals) * 1.25)
+    ax.set_xlim(-lim, lim)
+    ax.set_xlabel("Standardized coefficient  (← favors opponent   favors fighter →)")
+    ax.set_title("What the model weights most (top 15 of 69 features)")
+    ax.spines[["top", "right"]].set_visible(False)
+    h = [plt.Rectangle((0, 0), 1, 1, color=pos), plt.Rectangle((0, 0), 1, 1, color=neg)]
+    ax.legend(h, ["raises win probability", "lowers win probability"],
+              loc="upper right", fontsize=8.5, frameon=False)
+    fig.tight_layout(); fig.savefig(path, dpi=110); plt.close(fig)
+
 
 def _plot_calibration(y_true, p, path):
     bins = np.linspace(0, 1, 11)
