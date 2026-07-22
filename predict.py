@@ -2,11 +2,12 @@
 UFC fight winner predictor — command-line tool.
 
     python predict.py "Islam Makhachev" "Charles Oliveira"
-    python predict.py makhachev oliveira        # fuzzy last-name matching
+    python predict.py makhachev gaethje         # unique last names resolve too
 
 Prints each fighter's win probability plus the pre-fight stat comparison the
-model saw. Names are matched against the UFCStats database; stats are computed
-as of today from each fighter's UFC history.
+model saw. Name matching is case- and accent-insensitive; an ambiguous last
+name (e.g. "oliveira") lists the candidates. Stats are computed as of today
+from each fighter's UFC history.
 """
 
 import json

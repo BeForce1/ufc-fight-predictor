@@ -17,7 +17,7 @@ Upgrades over a plain ELO:
   (e.g. 0- to 2-fight records).
 
 Usage:
-    from models.elo_glicko import EloRatings
+    from elo import EloRatings
     elo = EloRatings(K=32)
     elo.fit(fights_df)                       # requires method + weight_class is OK; both optional
     feature_df = elo.add_features(feature_df)   # adds elo_diff, rd_diff

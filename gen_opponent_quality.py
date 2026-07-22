@@ -19,6 +19,8 @@ knowable strictly before D.
     python gen_opponent_quality.py
 """
 
+import json
+
 import numpy as np
 import pandas as pd
 
@@ -28,9 +30,10 @@ from features import DATA_DIR
 # Roughly top/bottom quartile of active fighters, symmetric around 1500.
 ELO_TOP = 1600.0
 ELO_BOT = 1475.0
-# K for the internal rating pass; validated against the 2024-01..2025-07
-# validation period alongside the main model's K.
-K = 256
+# K for the internal rating pass: use the tuned value train.py persisted so the
+# SOS table can't silently diverge from the main model's rating system.
+_K_PATH = DATA_DIR.parent / "models" / "elo_k.json"
+K = json.loads(_K_PATH.read_text())["K"] if _K_PATH.exists() else 256
 
 
 def run() -> None:
