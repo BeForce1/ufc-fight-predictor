@@ -1,4 +1,18 @@
-# UFC Fight Winner Predictor
+<h1 align="center">UFC Fight Winner Predictor</h1>
+
+<p align="center">
+  Predicting UFC fights from <strong>public pre-fight statistics alone</strong> — and knowing <em>when</em> it's right.
+</p>
+
+<p align="center">
+  <strong>66.0%</strong> per-fight accuracy &nbsp;·&nbsp;
+  <strong>0.702</strong> ROC AUC &nbsp;·&nbsp;
+  <strong>78.1%</strong> on confident picks &nbsp;·&nbsp;
+  <strong>8,621</strong> fights (1998–2026) &nbsp;·&nbsp;
+  <strong>69</strong> features
+</p>
+
+---
 
 A machine-learning study of how far a UFC fight outcome can be predicted from
 **public, pre-fight statistics alone** — striking, grappling, defense, recent
@@ -9,11 +23,6 @@ it never saw during training or model selection.
 This README is the full write-up: the data, the 69 features, which model won and
 *why* its coefficients say what they say, the evaluation discipline behind the
 headline number, and every idea that was tried and rejected.
-
-|  |  |  |  |  |
-|:--|:--|:--|:--|:--|
-| **66.0%** | **0.702** | **78.1%** | **8,621** | **69** |
-| per-fight test accuracy | test ROC AUC | accuracy, confident picks | fights, 1998–2026 | differential features |
 
 ---
 
@@ -34,7 +43,9 @@ The model beats a strong ELO baseline by **+6 points** using only information
 available before the fight — and, more usefully, **it knows when it's likely to
 be right.** Accuracy climbs monotonically with the model's own confidence:
 
-![Accuracy by confidence](reports/accuracy_by_confidence.png)
+<p align="center">
+  <img src="reports/accuracy_by_confidence.png" alt="Accuracy by prediction confidence" width="680">
+</p>
 
 | Model confidence in its pick | Share of fights | Accuracy |
 |---|---:|---:|
@@ -60,11 +71,10 @@ The probabilities are also **calibrated** — a predicted 70% really does win ab
 70% of the time — because the winning model is isotonic-calibrated on the
 validation period:
 
-![Calibration](reports/calibration.png)
-
-*Predicted win probability vs. actual win rate, held-out test fights. Points
-track the diagonal closely; the only real drift is slight overconfidence in the
-very top bin (~0.86 predicted → ~0.73 observed).*
+<p align="center">
+  <img src="reports/calibration.png" alt="Calibration curve" width="500"><br>
+  <sub><em>Predicted win probability vs. actual win rate, held-out test fights. Points track the diagonal closely; the only real drift is slight overconfidence in the very top bin (~0.86 predicted → ~0.73 observed).</em></sub>
+</p>
 
 ---
 
@@ -206,10 +216,10 @@ model, independent of the leaderboard.
 
 ### What the model actually weights
 
-![Top coefficients](reports/coefficients.png)
-
-*Standardized logistic-regression coefficients — the 15 largest of 69, by
-magnitude. Positive raises the fighter's win probability; negative lowers it.*
+<p align="center">
+  <img src="reports/coefficients.png" alt="Top 15 standardized coefficients" width="760"><br>
+  <sub><em>Standardized logistic-regression coefficients — the 15 largest of 69, by magnitude. Positive raises the fighter's win probability; negative lowers it.</em></sub>
+</p>
 
 Most of this is intuitive: younger, higher-rated, better-defended,
 currently-winning fighters are favored, and accumulated damage absorbed drags the

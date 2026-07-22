@@ -244,6 +244,28 @@ def main(rebuild: bool):
 
 # ── Charts ─────────────────────────────────────────────────────────────────────
 
+# Shared visual style — high-res output, cohesive palette, minimal chart junk.
+INK, STEEL, GOLD, GREEN, GRID = "#1b2733", "#9aa7b4", "#c0891e", "#0f8a6c", "#e7eaed"
+plt.rcParams.update({
+    "figure.dpi": 200, "savefig.dpi": 200,
+    "savefig.bbox": "tight", "savefig.facecolor": "white",
+    "figure.facecolor": "white", "axes.facecolor": "white",
+    "font.family": "DejaVu Sans", "font.size": 12,
+    "axes.titlesize": 15, "axes.titleweight": "bold", "axes.titlepad": 14,
+    "axes.labelsize": 11.5, "axes.labelcolor": INK, "text.color": INK,
+    "axes.edgecolor": "#c9d0d6", "axes.linewidth": 1.0,
+    "xtick.color": "#5b6670", "ytick.color": "#5b6670",
+    "xtick.labelsize": 10.5, "ytick.labelsize": 10.5,
+})
+
+
+def _mix(c1, c2, t):
+    """Linear blend between two hex colors, t in [0, 1]."""
+    a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
+    b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
+    return tuple((a[j] + (b[j] - a[j]) * t) / 255 for j in range(3))
+
+
 COEF_LABELS = {
     "age_diff": "Age difference",
     "diff_career_n_fights": "Career fight count",
@@ -273,25 +295,27 @@ def _plot_coefficients(model, feat_cols, path):
     order = np.argsort(-np.abs(coef))[:15]
     names = [COEF_LABELS.get(feat_cols[i], feat_cols[i]) for i in order][::-1]
     vals  = [float(coef[i]) for i in order][::-1]
-    pos, neg = "#2c3e50", "#a7b0b8"
-    colors = [pos if v > 0 else neg for v in vals]
-    fig, ax = plt.subplots(figsize=(7.4, 5.6))
+    colors = [GREEN if v > 0 else STEEL for v in vals]
+    fig, ax = plt.subplots(figsize=(8.6, 6.6))
     yy = np.arange(len(vals))
-    ax.barh(yy, vals, color=colors, height=0.72)
-    ax.axvline(0, color="#666", lw=1)
-    ax.set_yticks(yy); ax.set_yticklabels(names, fontsize=10)
+    ax.barh(yy, vals, color=colors, height=0.72, zorder=3, edgecolor="white", linewidth=0.8)
+    ax.axvline(0, color="#5b6670", lw=1.1, zorder=4)
+    ax.set_yticks(yy); ax.set_yticklabels(names)
     for yi, v in zip(yy, vals):
-        ax.text(v + (0.006 if v > 0 else -0.006), yi, f"{v:+.3f}",
-                va="center", ha="left" if v > 0 else "right", fontsize=8.5, color="#222")
-    lim = max(0.42, max(abs(v) for v in vals) * 1.25)
+        ax.text(v + (0.008 if v > 0 else -0.008), yi, f"{v:+.3f}",
+                va="center", ha="left" if v > 0 else "right", fontsize=9.5, color=INK)
+    lim = max(0.40, max(abs(v) for v in vals) * 1.30)
     ax.set_xlim(-lim, lim)
-    ax.set_xlabel("Standardized coefficient  (← favors opponent   favors fighter →)")
+    ax.grid(axis="x", color=GRID, lw=1, zorder=0); ax.set_axisbelow(True)
+    ax.tick_params(axis="y", length=0)
+    ax.set_xlabel("Standardized coefficient   (← favors opponent      favors fighter →)")
     ax.set_title("What the model weights most (top 15 of 69 features)")
-    ax.spines[["top", "right"]].set_visible(False)
-    h = [plt.Rectangle((0, 0), 1, 1, color=pos), plt.Rectangle((0, 0), 1, 1, color=neg)]
+    for s in ("top", "right", "left"):
+        ax.spines[s].set_visible(False)
+    h = [plt.Rectangle((0, 0), 1, 1, color=GREEN), plt.Rectangle((0, 0), 1, 1, color=STEEL)]
     ax.legend(h, ["raises win probability", "lowers win probability"],
-              loc="upper right", fontsize=8.5, frameon=False)
-    fig.tight_layout(); fig.savefig(path, dpi=110); plt.close(fig)
+              loc="upper right", fontsize=9.5, frameon=False)
+    fig.savefig(path); plt.close(fig)
 
 
 def _plot_calibration(y_true, p, path):
@@ -303,14 +327,23 @@ def _plot_calibration(y_true, p, path):
         if m.sum() >= 10:
             xs.append(p[m].mean())
             ys.append(y_true[m].mean())
-    fig, ax = plt.subplots(figsize=(5, 5))
-    ax.plot([0, 1], [0, 1], "--", color="#999", label="perfect")
-    ax.plot(xs, ys, "o-", color="#c0392b", label="model")
+    fig, ax = plt.subplots(figsize=(5.8, 5.8))
+    ax.plot([0, 1], [0, 1], ls=(0, (5, 4)), color=STEEL, lw=1.4, label="perfect", zorder=2)
+    ax.plot(xs, ys, "-", color=GOLD, lw=2.4, zorder=3)
+    ax.scatter(xs, ys, s=68, color=GOLD, edgecolor="white", linewidth=1.4, zorder=4, label="model")
+    ax.grid(color=GRID, lw=1, zorder=0); ax.set_axisbelow(True)
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.set_xticks([0, .25, .5, .75, 1]); ax.set_yticks([0, .25, .5, .75, 1])
+    ax.set_xticklabels(["0", "25%", "50%", "75%", "100%"])
+    ax.set_yticklabels(["0", "25%", "50%", "75%", "100%"])
     ax.set_xlabel("Predicted win probability")
     ax.set_ylabel("Observed win rate")
-    ax.set_title("Calibration (held-out test fights)")
-    ax.legend(); ax.set_xlim(0, 1); ax.set_ylim(0, 1)
-    fig.tight_layout(); fig.savefig(path, dpi=110); plt.close(fig)
+    ax.set_title("Predicted probabilities match reality")
+    ax.legend(loc="upper left", frameon=False, fontsize=10.5)
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    ax.set_aspect("equal", adjustable="box")
+    fig.savefig(path); plt.close(fig)
 
 
 def _plot_accuracy_by_confidence(y_true, p, path):
@@ -318,23 +351,33 @@ def _plot_accuracy_by_confidence(y_true, p, path):
     pred = (p >= 0.5).astype(int)
     correct = (pred == y_true).astype(int)
     edges = [0.5, 0.6, 0.7, 0.8, 1.01]
-    labels = ["50-60%", "60-70%", "70-80%", "80%+"]
+    labels = ["50–60%", "60–70%", "70–80%", "80%+"]
     accs, ns = [], []
     for lo, hi in zip(edges[:-1], edges[1:]):
         m = (conf >= lo) & (conf < hi)
         accs.append(correct[m].mean() if m.sum() else 0.0)
         ns.append(int(m.sum()))
-    fig, ax = plt.subplots(figsize=(6, 4))
-    bars = ax.bar(labels, accs, color="#2c3e50")
-    for bar, n, a in zip(bars, ns, accs):
-        ax.text(bar.get_x() + bar.get_width() / 2, a + 0.01,
-                f"{a:.0%}\nn={n}", ha="center", va="bottom", fontsize=9)
-    ax.axhline(0.5, ls="--", color="#999")
+    ramp = [_mix(STEEL, GOLD, t) for t in (0.0, 0.4, 0.75, 1.0)]
+    fig, ax = plt.subplots(figsize=(7.4, 4.7))
+    bars = ax.bar(labels, accs, color=ramp, width=0.66, zorder=3, edgecolor="white", linewidth=1.4)
+    ax.axhline(0.5, ls=(0, (5, 4)), color=STEEL, lw=1.3, zorder=2)
+    ax.text(3.55, 0.5, "coin flip", va="center", ha="left", fontsize=9.5,
+            color="#7a8690", clip_on=False)
+    for b, n, a in zip(bars, ns, accs):
+        ax.text(b.get_x() + b.get_width() / 2, a + 0.055, f"{a:.0%}",
+                ha="center", va="bottom", fontsize=14, fontweight="bold", color=INK)
+        ax.text(b.get_x() + b.get_width() / 2, a + 0.02, f"n={n}",
+                ha="center", va="bottom", fontsize=10, color="#7a8690")
+    ax.grid(axis="y", color=GRID, lw=1, zorder=0); ax.set_axisbelow(True)
+    ax.set_ylim(0, 1.0)
+    ax.set_yticks([0, .25, .5, .75, 1.0])
+    ax.set_yticklabels(["0", "25%", "50%", "75%", "100%"])
     ax.set_ylabel("Accuracy")
     ax.set_xlabel("Model confidence in its pick")
-    ax.set_title("Accuracy by prediction confidence (held-out test)")
-    ax.set_ylim(0, 1.05)
-    fig.tight_layout(); fig.savefig(path, dpi=110); plt.close(fig)
+    ax.set_title("Accuracy climbs with the model's confidence")
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    fig.savefig(path); plt.close(fig)
 
 
 if __name__ == "__main__":

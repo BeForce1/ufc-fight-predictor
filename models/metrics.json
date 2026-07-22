@@ -1,7 +1,7 @@
 {
   "model": "LogReg",
   "elo_k": 256,
-  "trained": "2026-07-22",
+  "trained": "2026-07-23",
   "n_train": 14314,
   "n_val": 1548,
   "n_test": 1076,
