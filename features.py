@@ -18,6 +18,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from elo import DEFAULT_ELO
+
 DATA_DIR = Path(__file__).resolve().parent / "data"
 
 # ── Weight-class ordinal encoding (longer keys first, e.g. "light heavyweight") ─
@@ -422,6 +424,17 @@ def _stance_encode(stance: str | None) -> int:
 
 _OQ_CACHE: dict = {}
 
+# ELO-mean SOS columns are centered on DEFAULT_ELO (~1500), not 0 — a fighter
+# with no qualifying prior opponents has no signal, not a literal zero. Filling
+# with 0.0 would manufacture a ~1500-point spurious diff against any opponent
+# who does have a real value. Count/ratio columns (wins_vs_top etc.) are
+# correctly 0 when there's no history, so only these get the neutral fill.
+_SOS_NEUTRAL_FILL = {
+    "opp_elo_mean": DEFAULT_ELO,
+    "opp_elo_mean_wins": DEFAULT_ELO,
+    "opp_elo_mean_losses": DEFAULT_ELO,
+}
+
 def _populate_sos_features(feats: dict, name_a: str, name_b: str, as_of=None) -> None:
     """Add strength-of-schedule (opponent-quality) columns from opponent_quality.csv."""
     if "oq" not in _OQ_CACHE:
@@ -438,9 +451,9 @@ def _populate_sos_features(feats: dict, name_a: str, name_b: str, as_of=None) ->
         if as_of is not None:
             sub = sub[sub.event_date <= pd.Timestamp(as_of)]
         if sub.empty:
-            return {c: 0.0 for c in sos_cols}
+            return {c: _SOS_NEUTRAL_FILL.get(c, 0.0) for c in sos_cols}
         row = sub.sort_values("event_date").iloc[-1]
-        return {c: (float(row[c]) if pd.notna(row[c]) else 0.0) for c in sos_cols}
+        return {c: (float(row[c]) if pd.notna(row[c]) else _SOS_NEUTRAL_FILL.get(c, 0.0)) for c in sos_cols}
 
     a_vals, b_vals = _latest(name_a), _latest(name_b)
     for c in sos_cols:
@@ -455,14 +468,28 @@ def build_features(focal: dict, opp: dict) -> dict:
         val = d.get(key)
         return float(val) if val is not None and not (isinstance(val, float) and math.isnan(val)) else 0.0
 
+    def _raw(d, key):
+        """None (not 0.0) when missing — 0 is a real value for some fields."""
+        val = d.get(key)
+        if val is None or (isinstance(val, float) and math.isnan(val)):
+            return None
+        return float(val)
+
+    def _phys_diff(key):
+        """height/reach/age: missing on either side means no comparison is
+        possible (0 diff), not a phantom comparison against a 0cm/0-year-old
+        fighter."""
+        fv, ov = _raw(focal, key), _raw(opp, key)
+        return (fv - ov) if (fv is not None and ov is not None) else 0.0
+
     focal_stance_enc = _stance_encode(focal.get("stance"))
     opp_stance_enc   = _stance_encode(opp.get("stance"))
     stance_mismatch  = 1 if (focal_stance_enc > 0 and opp_stance_enc > 0 and focal_stance_enc != opp_stance_enc) else 0
 
     feats = {
-        "height_diff":      _v(focal, "height_cm") - _v(opp, "height_cm"),
-        "reach_diff":       _v(focal, "reach_cm")  - _v(opp, "reach_cm"),
-        "age_diff":         _v(focal, "age")       - _v(opp, "age"),
+        "height_diff":      _phys_diff("height_cm"),
+        "reach_diff":       _phys_diff("reach_cm"),
+        "age_diff":         _phys_diff("age"),
         "stance_mismatch":  stance_mismatch,
         "weight_class_enc": _v(focal, "weight_class_enc"),
     }
