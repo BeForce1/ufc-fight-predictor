@@ -77,9 +77,9 @@ def test_order_invariance():
 def test_feature_vector_matches_model():
     """The live feature row must match the model's expected input shape and
     produce a valid probability distribution."""
-    model, feat_cols = _load_model()
+    model, feat_cols, elo_k = _load_model()
     fighters, fights, rounds = F.load_data()
-    elo = EloRatings(K=32).fit(fights)
+    elo = EloRatings(K=elo_k).fit(fights)
     today = date.today()
     sa = F.compute_fighter_stats("Jon Jones", fights, rounds, fighters, as_of_date=today)
     sb = F.compute_fighter_stats("Tom Aspinall", fights, rounds, fighters, as_of_date=today)

@@ -14,20 +14,20 @@ selection:
 
 | Metric | Value |
 |---|---|
-| **Winner accuracy** | **63.8%** |
-| ROC AUC | 0.663 |
-| Brier score | 0.236 |
-| ELO-rating baseline (pick the higher-rated fighter) | 55.2% |
+| **Winner accuracy** | **66.7%** |
+| ROC AUC | 0.708 |
+| Brier score | 0.214 |
+| ELO-rating baseline (pick the higher-rated fighter) | 60.0% |
 | "Pick the more experienced fighter" baseline | 44.2% |
 
-The model beats a strong ELO baseline by **+8.5 points** using only information
+The model beats a strong ELO baseline by **+6.7 points** using only information
 available before the fight. Accuracy climbs with the model's own confidence, and
 its probabilities are well-calibrated:
 
 ![Accuracy by confidence](reports/accuracy_by_confidence.png)
 ![Calibration](reports/calibration.png)
 
-*Left: when the model is 70–80% sure of its pick, it's right ~70% of the time.
+*Left: the model's highest-confidence picks (80%+) are right 80% of the time.
 Right: predicted probabilities line up closely with real-world win rates.*
 
 ## Try it
@@ -44,10 +44,10 @@ python predict.py "Islam Makhachev" "Charles Oliveira"
 ==========================================================
   UFC FIGHT WINNER PREDICTION
 ==========================================================
-  Islam Makhachev            83.3%  [#######################-----]
-  Charles Oliveira           16.7%  [#####-----------------------]
+  Islam Makhachev            76.3%  [#####################-------]
+  Charles Oliveira           23.7%  [#######---------------------]
 
-  Pick: Islam Makhachev  (83.3%)
+  Pick: Islam Makhachev  (76.3%)
 
   PRE-FIGHT STATS                       A           B
   UFC fights                      18          37
@@ -79,8 +79,9 @@ The prediction is independent of argument order.
 - **Symmetric** — each fight is learned from both fighters' perspectives, so the
   model has no "fighter A wins more often" bias.
 - **Honest evaluation** — a time-based split (train `< 2024`, validate
-  `2024-01 → 2025-07`, test `2025-07 →`). The model is chosen on the validation
-  period only; the test period is touched exactly once, for the numbers above.
+  `2024-01 → 2025-07`, test `2025-07 →`). The model — and the ELO system's own
+  update rate (`K`) — are chosen on the validation period only; the test period
+  is touched exactly once, for the numbers above.
 - **Calibrated** — the winning model (logistic regression) is isotonic-calibrated
   on the validation period so the probabilities mean what they say.
 
@@ -98,10 +99,13 @@ the best on validation AUC, calibrates it, and writes the model, metrics
 
 ## Notes & limitations
 
-- MMA is high-variance — a ~64% winner-accuracy model is doing well, but any
+- MMA is high-variance — a ~67% winner-accuracy model is doing well, but any
   single fight can go either way, and the model says so with its probability.
 - It only knows what's in the box-score data: no injuries, camps, weight cuts,
   short-notice replacements, or stylistic intangibles.
+- A handful of fighters share an identical display name in the source data
+  (which doesn't disambiguate them) — for those, this tool's stats may blend
+  two separate careers.
 - For research and educational use. Not affiliated with or endorsed by the UFC.
 
 ## License

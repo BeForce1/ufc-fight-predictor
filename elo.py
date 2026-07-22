@@ -203,9 +203,11 @@ class EloRatings:
         """
         Rating for `fighter` as of just before `date`.
 
-        Returns elos[idx-1] from bisect_left, i.e. the rating recorded before the
-        fighter's most-recent prior bout. Training and serving both go through
-        this same lookup, so the feature distribution is identical either way.
+        `_record()` stores the pre-bout rating at the same index as the bout
+        itself, so for a date that exactly matches one of the fighter's own
+        recorded bouts (the normal case — both training and serving query a
+        fight's own date), `bisect_left` lands on that bout's index and
+        `elos[idx]` is precisely the rating they carried into it.
 
         - For historical dates (during/before last recorded bout): return the
           stored before-bout rating; layoff-decay between bouts was already
@@ -221,7 +223,7 @@ class EloRatings:
         if idx == 0:
             return self.initial
         if idx < len(times):
-            return elos[idx - 1]
+            return elos[idx]
         # Past all recorded bouts: use current (post-last-fight) rating + decay
         base = self._current.get(fighter, self.initial)
         last_ts = times[-1]
@@ -232,8 +234,7 @@ class EloRatings:
         return base
 
     def get_rd_before(self, fighter: str, date: pd.Timestamp) -> float:
-        """RD-deviation lookup, mirroring get_elo_before so training and serving
-        read the rating deviation the same way."""
+        """RD-deviation lookup, mirroring get_elo_before's indexing."""
         if fighter not in self._history:
             return DEFAULT_RD
         times, _, rds = self._history[fighter]
@@ -241,7 +242,11 @@ class EloRatings:
         idx = bisect.bisect_left(times, ts)
         if idx == 0:
             return DEFAULT_RD
-        return rds[idx - 1]
+        if idx < len(times):
+            return rds[idx]
+        # Past all recorded bouts: current post-last-fight RD (no further decay
+        # model for RD between bouts, unlike ELO's layoff mean-reversion).
+        return self._current_rd.get(fighter, DEFAULT_RD)
 
     # ── Enrich feature DataFrame ──────────────────────────────────────────────
 

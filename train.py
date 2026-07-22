@@ -3,10 +3,13 @@ Train the UFC fight winner predictor.
 ================================================================
 1. Build a differential feature matrix for every UFC fight (both fighters'
    perspectives), using the *same* feature code the CLI uses at serve time.
+   ELO's K is tuned against the validation period (ELO-only AUC) and the
+   chosen value is saved to models/elo_k.json so predict.py fits the exact
+   same ELO model at serve time.
 2. Split by date (train < 2024, validation 2024-01..2025-07, test 2025-07+).
    Never touch the test set during model selection.
 3. Fit LR / RandomForest / gradient-boosting, pick the best on validation AUC,
-   Platt-calibrate it, and report held-out test accuracy vs simple baselines.
+   isotonic-calibrate it, and report held-out test accuracy vs simple baselines.
 4. Save the model, its feature list, metrics, and two report charts.
 
     python train.py            # uses cached feature matrix if present
@@ -48,11 +51,12 @@ SEED = 42
 
 # ── 1. Build feature matrix (both perspectives, strictly pre-fight) ────────────
 
+ELO_K_GRID = [32, 64, 96, 128, 160, 192, 224, 256, 288, 320]
+
+
 def build_matrix() -> pd.DataFrame:
     fighters, fights, rounds = F.load_data()
     fights = fights.sort_values("event_date").reset_index(drop=True)
-    print(f"  fitting ELO on {len(fights):,} fights ...")
-    elo = EloRatings(K=32).fit(fights)
 
     rows = []
     n = len(fights)
@@ -88,6 +92,22 @@ def build_matrix() -> pd.DataFrame:
             rows.append(feats)
 
     df = pd.DataFrame(rows)
+
+    # Tune ELO's K on the validation period only (never test) — the model
+    # itself doesn't get re-trained per K here, just the ELO-only signal
+    # measured against validation, which is what tune_K optimizes for.
+    print("  tuning ELO K on validation period ...")
+    tr_mask = df["event_date"] < VAL_START
+    va_mask = (df["event_date"] >= VAL_START) & (df["event_date"] < TEST_START)
+    elo = EloRatings.tune_K(fights, df[tr_mask], df[va_mask], k_values=ELO_K_GRID)
+    val_probe = elo.add_features(df[va_mask])
+    elo_val_auc = roc_auc_score(
+        df.loc[va_mask, "focal_win"],
+        elo.predict_proba_from_diff(val_probe["elo_diff"].fillna(0).values),
+    )
+    print(f"  selected ELO K={elo.K} (ELO-only val AUC {elo_val_auc:.4f})")
+    (MODELS_DIR / "elo_k.json").write_text(json.dumps({"K": elo.K}))
+
     df = elo.add_features(df)   # adds elo_diff, rd_diff (as-of each fight, no lookahead)
     return df
 
@@ -164,8 +184,10 @@ def main(rebuild: bool):
     # ── 3. Held-out test metrics ──────────────────────────────────────────────
     p_te = cal.predict_proba(Xte)[:, 1]
     pred = (p_te >= 0.5).astype(int)
+    elo_k = json.loads((MODELS_DIR / "elo_k.json").read_text())["K"]
     metrics = {
         "model": best_name,
+        "elo_k": elo_k,
         "trained": datetime.now().strftime("%Y-%m-%d"),
         "n_train": int(tr.sum()), "n_val": int(va.sum()), "n_test": int(te.sum()),
         "test_period": f"{TEST_START.date()} .. {dt.max().date()}",

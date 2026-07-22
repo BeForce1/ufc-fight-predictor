@@ -28,7 +28,8 @@ MODELS_DIR = Path(__file__).resolve().parent / "models"
 def _load_model():
     model = joblib.load(MODELS_DIR / "model.joblib")
     feat_cols = json.loads((MODELS_DIR / "feature_cols.json").read_text())
-    return model, feat_cols
+    elo_k = json.loads((MODELS_DIR / "elo_k.json").read_text())["K"]
+    return model, feat_cols, elo_k
 
 
 def _feature_row(foc_name, opp_name, foc_stats, opp_stats, elo, feat_cols, as_of):
@@ -44,9 +45,9 @@ def _feature_row(foc_name, opp_name, foc_stats, opp_stats, elo, feat_cols, as_of
 
 
 def predict(name_a: str, name_b: str) -> dict:
-    model, feat_cols = _load_model()
+    model, feat_cols, elo_k = _load_model()
     fighters, fights, rounds = F.load_data()
-    elo = EloRatings(K=32).fit(fights)
+    elo = EloRatings(K=elo_k).fit(fights)
 
     row_a = F.find_fighter(name_a, fighters, fights)
     row_b = F.find_fighter(name_b, fighters, fights)
