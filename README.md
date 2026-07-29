@@ -316,6 +316,73 @@ survived; the rest are recorded so they aren't re-attempted.
 
 ---
 
+## Side quests — fight-game myths, tested
+
+Two things people believe about fights, run against the same public data the
+model trains on (`python myths.py`, ~15 s, nothing here feeds the model). Every
+claim is scored next to a **pre-registered noise yardstick**: 200 columns of
+pure random noise scored the same way against the same target. A real signal
+has to beat what noise achieves at the same sample size — with many features
+tested, it should beat the *best* of all 200 noise columns.
+
+### Astrology is dead; the actuarial table isn't
+
+Moon phase and illumination, full- and new-moon windows, Mercury retrograde,
+Friday the 13th, and zodiac sign/element matchups, scored against who wins and
+how fights end (finish / KO / submission / duration) on n = 8,372–8,621 fights.
+**Every genuinely celestial feature lands inside the noise band** — the best of
+them (moon illumination vs. finish rate, |AUC−0.5| = 0.009) doesn't clear even
+the 95th percentile of pure noise.
+
+The punchline comes from the same date-of-birth column the star signs were
+computed from: plain **age difference (AUC 0.407 — the younger fighter wins)**
+posts an effect five times the worst of 200 noise columns, the strongest single
+feature in the dataset. Read as a zodiac sign, a birthday predicts nothing;
+read as a number, it's the best predictor we have.
+
+<p align="center">
+  <img src="reports/myth_scoreboard.png" alt="Effect sizes of cosmic features vs the noise band" width="720">
+</p>
+
+Two joke features are left standing, and they're the most instructive part:
+
+- **Name-length difference** (AUC 0.522, longer name wins) beats the
+  family-wise bar *and* survives an age-control re-test (residualized on age
+  difference: p ≈ 2×10⁻⁴). It still doesn't go in the model: the boring
+  explanation is a demographic/era confound — which fighter cohorts happen to
+  carry long names and happen to be strong in this dataset. The lesson is that
+  a univariate scan will cheerfully "confirm" an absurd feature; features earn
+  their place on validation, not on screens like this one.
+- **Zodiac-sign-index difference** (AUC 0.518) grazes the bar and weakens once
+  age is partialled out (p = 0.013) — sign index is birth month, birth month is
+  a within-year age proxy, and the rest is exactly the marginal survivor that
+  testing 44 feature-target cells manufactures.
+
+### Nobody gasses — losers are slower from round one
+
+The myth: fights are decided by cardio, and the loser fades late. Two method
+traps produce a fake fade if unhandled. A fight that ends early has a partial
+final round, and raw per-round volume there looks exactly like gassing — so
+each final round is normalised by its true duration from `finish_time`
+(sub-minute rounds are floored out as unstable). And winner must be split from
+loser — pooled, the winner's surge and the loser's deficit cancel to a flat
+line.
+
+<p align="center">
+  <img src="reports/myth_cardio.png" alt="Strike output per minute by round, split by result" width="680">
+</p>
+
+Every group **climbs**. Across 3-round fights, decision losers throw
+6.8 → 7.2 → 7.6 significant-strike attempts per minute over rounds 1–3;
+decision winners 8.0 → 8.6 → 8.9. In fights that end in a finish, the winner
+accelerates 8.8 → 10.3 → 10.8 while the eventual loser holds 6.7 → 6.8 → 7.1.
+A finish looks like the winner pulling away in tempo, not the loser collapsing
+— losers simply throw ~1.2–2 fewer attempts per minute from the opening bell.
+(Caveats: this measures work rate, not damage absorbed, and round-3 rows in
+finish fights are conditioned on the fight lasting that long.)
+
+---
+
 ## Limitations
 
 - **~40% of fights are near coin-flips** even to the model — honest sport
@@ -338,9 +405,10 @@ survived; the rest are recorded so they aren't re-attempted.
 | `features.py` | shared feature code (identical at train and serve time) |
 | `elo.py` | ELO/Glicko rating system |
 | `test_predictor.py` | 7-check regression suite |
+| `myths.py` | the side-quest analyses (astrology scoreboard, cardio-by-round) |
 | `data/` | 3 UFCStats tables (fighters / fights / rounds) + a generated strength-of-schedule table |
 | `models/` | trained model, feature list, tuned K, metrics |
-| `reports/` | the three charts above |
+| `reports/` | the charts above |
 
 ```bash
 # from a fresh clone
@@ -349,6 +417,7 @@ python gen_opponent_quality.py   # rebuild strength-of-schedule table
 python train.py --rebuild        # recompute features (~8 min), then train
 python test_predictor.py         # 7/7 regression checks
 python predict.py "Fighter A" "Fighter B"
+python myths.py                  # regenerate the myth-busting analyses
 ```
 
 `train.py` picks the best model on validation AUC, isotonic-calibrates it, and
