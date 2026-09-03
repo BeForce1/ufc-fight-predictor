@@ -1,5 +1,5 @@
 """
-Regression checks for the UFC fight winner predictor. No framework — plain
+Regression checks for the UFC fight winner predictor. No framework, plain
 asserts. Run directly:
 
     python test_predictor.py

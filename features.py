@@ -427,7 +427,7 @@ def _stance_encode(stance: str | None) -> int:
 
 _OQ_CACHE: dict = {}
 
-# ELO-mean SOS columns are centered on DEFAULT_ELO (~1500), not 0 — a fighter
+# ELO-mean SOS columns are centered on DEFAULT_ELO (~1500), not 0. A fighter
 # with no qualifying prior opponents has no signal, not a literal zero. Filling
 # with 0.0 would manufacture a ~1500-point spurious diff against any opponent
 # who does have a real value. Count/ratio columns (wins_vs_top etc.) are
@@ -476,7 +476,7 @@ def build_features(focal: dict, opp: dict) -> dict:
         return float(val) if val is not None and not (isinstance(val, float) and math.isnan(val)) else 0.0
 
     def _raw(d, key):
-        """None (not 0.0) when missing — 0 is a real value for some fields."""
+        """None (not 0.0) when missing: 0 is a real value for some fields."""
         val = d.get(key)
         if val is None or (isinstance(val, float) and math.isnan(val)):
             return None

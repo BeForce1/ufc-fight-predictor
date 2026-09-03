@@ -1,9 +1,9 @@
 """
-Generate data/opponent_quality.csv — strength-of-schedule features.
+Generate data/opponent_quality.csv (strength-of-schedule features).
 
 For each (fighter, fight date), emits cumulative pre-fight descriptions of who
 the fighter has faced so far, using each opponent's ELO rating *as they walked
-into that bout* (causal — no future information):
+into that bout* (causal, no future information):
 
     opp_elo_mean          avg rating of all prior opponents
     opp_elo_mean_wins     avg rating of opponents this fighter beat
@@ -76,8 +76,8 @@ def run() -> None:
         "losses_vs_bottom": cs("loss_bot").astype(int),
         "bad_loss_ratio":   cs("loss_bot") / (n_losses + 1),
     })
-    # Same-day duplicates (old one-night tournaments): keep the FIRST row —
-    # the state before any of that day's fights — matching the strictly-before
+    # Same-day duplicates (old one-night tournaments): keep the FIRST row,
+    # the state before any of that day's fights, matching the strictly-before
     # semantics used everywhere else in the pipeline.
     oq = oq.drop_duplicates(subset=["fighter", "event_date"], keep="first")
 

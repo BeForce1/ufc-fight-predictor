@@ -93,7 +93,7 @@ def build_matrix() -> pd.DataFrame:
 
     df = pd.DataFrame(rows)
 
-    # Tune ELO's K on the validation period only (never test) — the model
+    # Tune ELO's K on the validation period only (never test). The model
     # itself doesn't get re-trained per K here, just the ELO-only signal
     # measured against validation, which is what tune_K optimizes for.
     print("  tuning ELO K on validation period ...")
@@ -175,7 +175,7 @@ def main(rebuild: bool):
     print(f"  selected {best_name} (val AUC {best_auc:.4f})")
 
     # Isotonic-calibrate on validation, then freeze. Isotonic (not Platt) because
-    # the base scores are overconfident at the extremes — a monotonic sigmoid
+    # the base scores are overconfident at the extremes; a monotonic sigmoid
     # can't correct that, a non-parametric isotonic map can.
     p_val_raw = best_model.predict_proba(Xva)[:, 1]
     iso = IsotonicRegression(out_of_bounds="clip").fit(p_val_raw, yva)
@@ -244,7 +244,7 @@ def main(rebuild: bool):
 
 # ── Charts ─────────────────────────────────────────────────────────────────────
 
-# Shared visual style — high-res output, cohesive palette, minimal chart junk.
+# Shared visual style: high-res output, cohesive palette, minimal chart junk.
 INK, STEEL, GOLD, GREEN, GRID = "#1b2733", "#9aa7b4", "#c0891e", "#0f8a6c", "#e7eaed"
 plt.rcParams.update({
     "figure.dpi": 200, "savefig.dpi": 200,

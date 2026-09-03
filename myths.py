@@ -5,7 +5,7 @@ Two questions, answered from the same public UFCStats snapshot the model
 trains on (`python myths.py`, ~10s, writes charts to reports/):
 
 1. Do "cosmic" factors matter? Zodiac signs, moon phase, Mercury retrograde,
-   Friday the 13th — scored against who wins and how fights end, next to a
+   Friday the 13th, scored against who wins and how fights end, next to a
    pre-registered noise yardstick: 200 columns of pure random noise scored
    the same way. A real signal must beat what noise achieves at the same n.
 
@@ -40,7 +40,7 @@ SYNODIC = 29.530588853
 
 def moon_age(dates):
     """Days since new moon, 0..29.53. Mean synodic month, within ~0.6d of the
-    true ephemeris — plenty for a yes/no astrology question."""
+    true ephemeris, plenty for a yes/no astrology question."""
     d = (pd.to_datetime(dates) - NEW_MOON_EPOCH).dt.total_seconds() / 86400.0
     return np.mod(d, SYNODIC)
 
@@ -222,7 +222,7 @@ def age_controlled(f):
 
 def cardio_rounds(f):
     """Round-level output per minute. A fight that ended early has a partial
-    final round, and raw per-round volume there looks exactly like fading —
+    final round, and raw per-round volume there looks exactly like fading,
     so the final round is normalised by its real duration from `finish_time`."""
     r = pd.read_csv(DATA_DIR / "ufcstats_rounds.csv")
     cols = ["event_name", "bout", "event_date", "method", "finish_round",
@@ -236,7 +236,7 @@ def cardio_rounds(f):
     mmss = r["finish_time"].astype(str).str.extract(r"^(\d+):(\d+)$").astype(float)
     fin_secs = mmss[0] * 60 + mmss[1]
     r["dur"] = np.clip(np.where(r["round"] < r["finish_round"], 300.0, fin_secs), 0, 300)
-    # A sub-minute round gives a wildly unstable rate — a 10-strike flurry in
+    # A sub-minute round gives a wildly unstable rate: a 10-strike flurry in
     # 15s reads as 40/min and would fake escalation. 60-second floor.
     r = r[r["dur"] >= 60].copy()
     r["out_pm"] = r["sig_str_att"] / (r["dur"] / 60.0)

@@ -39,7 +39,7 @@ RD_DECAY     = 0.92        # RD multiplier per fight (rough Glicko equivalent)
 
 # Layoff-based rating decay: fighters mean-revert toward DEFAULT_ELO during
 # long inactivity. A soft threshold (LAYOFF_FREE_DAYS) prevents routine
-# inter-bout spacing from eroding ratings of active fighters — only layoffs
+# inter-bout spacing from eroding ratings of active fighters; only layoffs
 # beyond ~9 months (the kind that signal injury/retirement/ring rust) decay.
 # With LAYOFF_FREE_DAYS=270 and half-life 1095 (3yr), a fighter idle 3.75yr
 # loses half their distance from neutral; routine 6-month gaps do nothing.
@@ -96,7 +96,7 @@ class EloRatings:
     def _apply_layoff_decay(self, fighter: str, date: pd.Timestamp) -> None:
         """
         Mean-revert rating toward `initial` based on time since last bout.
-        Subtracts LAYOFF_FREE_DAYS so routine 6-month gaps don't decay anyone —
+        Subtracts LAYOFF_FREE_DAYS so routine 6-month gaps don't decay anyone;
         only layoffs beyond ~9 months start moving the needle.
         """
         if self.rating_half_life_days <= 0:
@@ -205,7 +205,7 @@ class EloRatings:
 
         `_record()` stores the pre-bout rating at the same index as the bout
         itself, so for a date that exactly matches one of the fighter's own
-        recorded bouts (the normal case — both training and serving query a
+        recorded bouts (the normal case: both training and serving query a
         fight's own date), `bisect_left` lands on that bout's index and
         `elos[idx]` is precisely the rating they carried into it.
 

@@ -1,5 +1,5 @@
 """
-UFC fight winner predictor — command-line tool.
+UFC fight winner predictor: command-line tool.
 
     python predict.py "Islam Makhachev" "Charles Oliveira"
     python predict.py makhachev gaethje         # unique last names resolve too

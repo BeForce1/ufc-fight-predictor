@@ -1,5 +1,5 @@
 """
-Model wrappers (calibration + stacking) — stored in a non-__main__ module so
+Model wrappers (calibration + stacking), stored in a non-__main__ module so
 joblib can unpickle them regardless of how the training script was invoked.
 """
 
